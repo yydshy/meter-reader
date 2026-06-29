@@ -975,7 +975,10 @@
     document.body.classList.add('view-mode');
     const totalEl = document.getElementById('viewTotal');
     totalEl.style.display = 'block';
-    document.getElementById('viewTotalNum').textContent = data.total;
+    // 统计已抄户数
+    const filledCount = Object.keys(data.readings).filter(k => data.readings[k] && data.readings[k].current != null).length;
+    document.getElementById('viewTotalNum').textContent = filledCount;
+    document.querySelector('.view-total-label').textContent = '本月已抄表（户）';
     currentMonth = data.month;
     document.getElementById('monthSelect').innerHTML = `<option value="${data.month}">${fmtMonth(data.month)}</option>`;
     const list = document.getElementById('floorList');
@@ -1000,20 +1003,11 @@
           `;
         }
         const current = rd.current;
-        const prev = rd.prev;
-        let usageHtml = '';
-        if (prev != null && prev !== '' && !isNaN(current) && !isNaN(prev)) {
-          const usage = calcUsage(current, prev).toFixed(1);
-          const cls = parseFloat(usage) < 0 ? 'danger' : 'has-value';
-          usageHtml = `<div class="room-usage ${cls}">用电 ${usage} 度</div>`;
-        } else {
-          usageHtml = `<div class="room-usage first">首次抄表</div>`;
-        }
         return `
           <div class="room" data-num="${a.num}">
             <div class="room-num">${a.num}</div>
             <div class="room-info">
-              ${usageHtml}
+              <div class="room-usage has-value" style="font-size:18px;font-weight:700;font-family:var(--font-display);">读数 ${current}</div>
             </div>
           </div>
         `;
