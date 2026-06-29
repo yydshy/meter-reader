@@ -1,0 +1,1703 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0c0c0b">
+<title>抄表助手</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23d97757'/><text x='16' y='24' font-size='18' text-anchor='middle' fill='white'>⚡</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Serif+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0c0c0b;
+    --bg-soft: #111110;
+    --surface: #171715;
+    --surface-hover: #1d1d1a;
+    --surface-raised: #20201d;
+    --border: #2a2a26;
+    --border-hover: #3a3a34;
+    --ink: #f2f1ec;
+    --ink-2: #a8a69c;
+    --ink-3: #6b695f;
+    --accent: #d97757;
+    --accent-2: #e8956a;
+    --accent-dim: rgba(217,119,87,0.09);
+    --accent-border: rgba(217,119,87,0.22);
+    --accent-glow: rgba(217,119,87,0.3);
+    --green: #788c5d;
+    --green-dim: rgba(120,140,93,0.09);
+    --red: #c96b5c;
+    --red-dim: rgba(201,107,92,0.09);
+    --blue: #6a9bcc;
+    --font-display: 'Plus Jakarta Sans', -apple-system, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    --font-body: 'Plus Jakarta Sans', -apple-system, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    --font-serif: 'Noto Serif SC', Georgia, serif;
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 20px;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
+    --shadow-md: 0 4px 16px rgba(0,0,0,0.25);
+    --shadow-lg: 0 12px 40px rgba(0,0,0,0.3);
+    --shadow-glow: 0 0 40px rgba(217,119,87,0.1);
+    --floor-1: #fef3c7;
+    --floor-2: #dbeafe;
+    --floor-3: #d1fae5;
+    --floor-4: #fce7f3;
+    --floor-5: #e0e7ff;
+    --floor-6: #fed7aa;
+    --font-scale: 1;
+  }
+
+  body.elder-mode {
+    --font-scale: 1.15;
+    font-size: calc(15px * var(--font-scale));
+  }
+  body.elder-mode .header h1 { font-size: calc(22px * var(--font-scale)); }
+  body.elder-mode .month-selector select { font-size: calc(15px * var(--font-scale)); padding: calc(10px * var(--font-scale)) calc(12px * var(--font-scale)); }
+  body.elder-mode .month-stats { font-size: calc(13px * var(--font-scale)); padding: calc(6px * var(--font-scale)) calc(12px * var(--font-scale)); }
+  body.elder-mode .floor-header { font-size: calc(15px * var(--font-scale)); padding: calc(13px * var(--font-scale)) calc(16px * var(--font-scale)); }
+  body.elder-mode .floor-tag { width: calc(36px * var(--font-scale)); height: calc(36px * var(--font-scale)); font-size: calc(16px * var(--font-scale)); }
+  body.elder-mode .room-num { font-size: calc(18px * var(--font-scale)); width: calc(56px * var(--font-scale)); }
+  body.elder-mode .room-last { font-size: calc(13px * var(--font-scale)); }
+  body.elder-mode .room-usage { font-size: calc(15px * var(--font-scale)); min-height: calc(24px * var(--font-scale)); }
+  body.elder-mode .room input { font-size: calc(18px * var(--font-scale)); width: calc(110px * var(--font-scale)); padding: calc(10px * var(--font-scale)); }
+  body.elder-mode .history-month-title { font-size: calc(18px * var(--font-scale)); }
+  body.elder-mode .history-month-total { font-size: calc(16px * var(--font-scale)); }
+  body.elder-mode .history-row { font-size: calc(16px * var(--font-scale)); padding: calc(13px * var(--font-scale)) calc(16px * var(--font-scale)); }
+  body.elder-mode .settings-item { font-size: calc(17px * var(--font-scale)); padding: calc(16px * var(--font-scale)) calc(16px * var(--font-scale)); }
+  body.elder-mode .settings-item .icon { width: calc(40px * var(--font-scale)); height: calc(40px * var(--font-scale)); font-size: calc(20px * var(--font-scale)); }
+  body.elder-mode .tab svg { width: calc(28px * var(--font-scale)); height: calc(28px * var(--font-scale)); }
+  body.elder-mode .tab { font-size: calc(12px * var(--font-scale)); }
+
+  body.view-mode .tab-bar { display: none; }
+  body.view-mode .header h1::after { content: '（查看）'; font-size: 14px; color: var(--ink-3); margin-left: 8px; }
+  body.view-mode .month-selector select { display: none; }
+  body.view-mode .month-stats { display: none; }
+  body.view-mode .room input { display: none; }
+  body.view-mode .room-last { display: none; }
+  body.view-mode .room-info { text-align: left; }
+  body.view-mode .room-usage { font-size: 16px; }
+  body.view-mode .room-num { font-size: 20px; width: 70px; }
+  body.view-mode .room { padding: 14px 16px; }
+  body.view-mode body { padding-bottom: 20px; }
+
+  .view-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    background: var(--green-dim);
+    color: var(--green);
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 600;
+    margin-left: 10px;
+  }
+
+  .view-total {
+    background: var(--surface);
+    margin: 12px;
+    padding: 20px;
+    border-radius: var(--radius-xl);
+    text-align: center;
+    border: 1.5px solid var(--accent);
+    box-shadow: var(--shadow-glow);
+  }
+  .view-total-num { font-size: 36px; font-weight: 800; color: var(--accent); font-family: var(--font-display); }
+  .view-total-label { font-size: 14px; color: var(--ink-3); margin-top: 4px; }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--ink-2);
+    font-family: var(--font-body);
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior-y: contain;
+    min-height: 100vh;
+  }
+
+  body {
+    padding-bottom: calc(70px + env(safe-area-inset-bottom));
+    background-image:
+      radial-gradient(ellipse 80% 50% at 50% -20%, rgba(217,119,87,0.07), transparent),
+      radial-gradient(ellipse 60% 40% at 100% 0%, rgba(106,155,204,0.04), transparent);
+    background-attachment: fixed;
+  }
+
+  ::selection { background: var(--accent); color: var(--bg); }
+
+  /* Header */
+  .header {
+    background: var(--surface);
+    padding: 16px 20px 12px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  .header h1 {
+    margin: 0 0 8px;
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--ink);
+    letter-spacing: -0.02em;
+  }
+
+  .month-selector {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+  }
+
+  .month-selector select {
+    flex: 1;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    font-size: 15px;
+    background: var(--bg);
+    color: var(--ink);
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3e%3cpath d='M1 1.5L6 6.5L11 1.5' stroke='%236b695f' stroke-width='1.5' stroke-linecap='round'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 36px;
+    transition: border-color .2s ease, box-shadow .2s ease;
+  }
+  .month-selector select:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(217,119,87,0.1);
+  }
+
+  .month-stats {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 12px;
+    background: var(--accent-dim);
+    color: var(--accent);
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    border: 1px solid var(--accent-border);
+  }
+
+  /* Floor section */
+  .floor-section {
+    margin: 10px 12px;
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    border: 1px solid var(--border);
+    transition: all .25s cubic-bezier(.4,0,.2,1);
+  }
+  .floor-section:hover {
+    border-color: var(--border-hover);
+  }
+
+  .floor-header {
+    display: flex;
+    align-items: center;
+    padding: 13px 16px;
+    background: var(--floor-color, var(--bg));
+    font-weight: 600;
+    font-size: 15px;
+    color: var(--text);
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.2s;
+  }
+
+  .floor-header:active {
+    opacity: 0.8;
+  }
+
+  .floor-header .floor-tag {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: rgba(255,255,255,0.7);
+    border-radius: 8px;
+    margin-right: 10px;
+    font-weight: 700;
+    font-size: 14px;
+    color: #1a1a1a;
+  }
+
+  .floor-header .floor-stats {
+    margin-left: auto;
+    font-size: 12px;
+    color: var(--ink-3);
+    font-weight: 500;
+  }
+
+  .floor-header .arrow {
+    margin-left: 6px;
+    transition: transform 0.2s;
+    color: var(--ink-3);
+  }
+
+  .floor-section.collapsed .arrow { transform: rotate(-90deg); }
+  .floor-section.collapsed .rooms { display: none; }
+
+  /* Room card */
+  .rooms {
+    padding: 0 12px 12px;
+  }
+
+  .room {
+    display: flex;
+    align-items: center;
+    padding: 10px 12px;
+    margin-top: 8px;
+    background: var(--bg-soft);
+    border-radius: var(--radius-md);
+    border: 1px solid transparent;
+    transition: all 0.15s;
+    gap: 10px;
+  }
+
+  .room:first-child {
+    margin-top: 12px;
+  }
+
+  .room:focus-within {
+    background: var(--surface-raised);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(217,119,87,0.1);
+    transform: translateY(-1px);
+  }
+
+  .room.saved {
+    background: rgba(120,140,93,0.08);
+    border-color: rgba(120,140,93,0.2);
+  }
+
+  .room-num {
+    flex-shrink: 0;
+    width: 48px;
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--ink);
+    letter-spacing: -0.5px;
+    font-family: var(--font-display);
+  }
+
+  .room-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+
+  .room-last {
+    font-size: 12px;
+    color: var(--ink-3);
+  }
+
+  .room-usage {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink-3);
+    min-height: 18px;
+  }
+
+  .room-usage.has-value { color: var(--green); }
+  .room-usage.warn { color: var(--accent); }
+  .room-usage.danger { color: var(--red); }
+  .room-usage.first { color: var(--ink-3); font-weight: 500; }
+  .room-usage.rollover { color: var(--accent); font-weight: 600; }
+
+  .room input {
+    width: 100px;
+    padding: 8px 10px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 16px;
+    font-weight: 700;
+    text-align: right;
+    background: var(--bg);
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+    -webkit-appearance: none;
+    appearance: none;
+    transition: all 0.15s;
+    flex-shrink: 0;
+    font-family: var(--font-display);
+  }
+
+  .room input::placeholder {
+    color: var(--ink-3);
+    font-weight: 500;
+    font-size: 14px;
+  }
+
+  .room input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(217,119,87,0.15);
+    border-width: 2px;
+  }
+
+  /* Tabs */
+  .tab-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(23,23,21,0.95);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-top: 1px solid var(--border);
+    display: flex;
+    padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
+    z-index: 20;
+    box-shadow: 0 -2px 20px rgba(0,0,0,0.3);
+  }
+
+  .tab {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 6px 0;
+    background: none;
+    border: none;
+    color: var(--ink-3);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    gap: 3px;
+    font-family: var(--font-body);
+  }
+
+  .tab.active {
+    color: var(--accent);
+  }
+
+  .tab svg {
+    width: 24px;
+    height: 24px;
+    transition: transform 0.2s;
+  }
+
+  .tab:active svg {
+    transform: scale(0.95);
+  }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* History tab */
+  .history-month {
+    margin: 12px;
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    border: 1px solid var(--border);
+    transition: all .25s cubic-bezier(.4,0,.2,1);
+  }
+  .history-month:hover {
+    border-color: var(--border-hover);
+  }
+
+  .history-month-header {
+    padding: 14px 16px;
+    background: linear-gradient(135deg, var(--accent-dim), var(--surface));
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .history-month-title { font-weight: 700; font-size: 16px; color: var(--accent); }
+  .history-month-total { font-size: 14px; font-weight: 600; opacity: 0.9; color: var(--ink-2); }
+
+  .history-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 11px 16px;
+    border-top: 1px solid var(--border);
+    font-size: 14px;
+  }
+
+  .history-row:first-child { border-top: none; }
+  .history-row-num { font-weight: 600; color: var(--ink); }
+  .history-row-val { color: var(--ink-3); font-variant-numeric: tabular-nums; }
+  .history-row-usage { font-weight: 600; color: var(--green); font-variant-numeric: tabular-nums; }
+
+  .empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--ink-3);
+    font-size: 14px;
+  }
+  .empty .emoji { font-size: 48px; margin-bottom: 12px; }
+
+  /* Settings tab */
+  .settings-group {
+    margin: 12px;
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+
+  .settings-title {
+    padding: 14px 16px 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink-3);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .settings-item {
+    display: flex;
+    align-items: center;
+    padding: 14px 16px;
+    border-top: 1px solid var(--border);
+    background: none;
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+    width: 100%;
+    text-align: left;
+    font-size: 15px;
+    color: var(--ink);
+    cursor: pointer;
+    gap: 12px;
+    transition: all .15s ease;
+  }
+  .settings-item:first-child { border-top: none; }
+  .settings-item:hover {
+    background: var(--surface-hover);
+  }
+
+  .settings-item .icon {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--accent-dim);
+    color: var(--accent);
+    border-radius: 8px;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+
+  .settings-item .label { flex: 1; font-weight: 500; }
+  .settings-item .arrow-r { color: var(--ink-3); }
+  .settings-item.danger { color: var(--red); }
+  .settings-item.danger .icon { background: var(--red-dim); color: var(--red); }
+
+  .toast {
+    position: fixed;
+    bottom: 90px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(23,23,21,0.95);
+    color: var(--ink);
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-size: 14px;
+    z-index: 100;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+    border: 1px solid var(--border);
+    backdrop-filter: blur(12px);
+  }
+  .toast.show { opacity: 1; }
+
+  /* Modal */
+  .modal-mask {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    padding: 20px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+  }
+  .modal-mask.show { opacity: 1; pointer-events: auto; }
+
+  .modal {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    max-width: 400px;
+    width: 100%;
+    max-height: 80vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .modal-header {
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--ink);
+  }
+
+  .modal-body {
+    padding: 16px;
+    overflow-y: auto;
+    flex: 1;
+    color: var(--ink-2);
+  }
+
+  .modal-footer {
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+  }
+
+  .btn {
+    padding: 10px 20px;
+    border-radius: var(--radius-md);
+    border: none;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    background: var(--surface-raised);
+    color: var(--ink);
+    transition: all .2s cubic-bezier(.4,0,.2,1);
+    font-family: var(--font-body);
+  }
+  .btn:hover {
+    background: var(--border-hover);
+    transform: translateY(-1px);
+  }
+  .btn.primary {
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: #fff;
+    box-shadow: 0 4px 16px rgba(217,119,87,0.25);
+  }
+  .btn.primary:hover {
+    box-shadow: 0 6px 24px rgba(217,119,87,0.35);
+    transform: translateY(-1px);
+  }
+  .btn.danger { background: var(--red); color: #fff; }
+  .btn.danger:hover { background: #d47565; }
+  .btn.ghost { background: transparent; color: var(--accent); }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 0; }
+
+  /* Gist sync panel */
+  .gist-panel {
+    padding: 12px 16px 16px;
+  }
+  .gist-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg);
+    color: var(--ink);
+    font-size: 13px;
+    font-family: monospace;
+    margin-bottom: 10px;
+    outline: none;
+    transition: border-color .2s ease;
+  }
+  .gist-input:focus {
+    border-color: var(--accent);
+  }
+  .gist-input::placeholder {
+    color: var(--ink-3);
+  }
+  .gist-status {
+    font-size: 12px;
+    color: var(--ink-3);
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .gist-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--ink-3);
+  }
+  .gist-status-dot.connected { background: var(--green); box-shadow: 0 0 6px rgba(120,140,93,0.5); }
+  .gist-status-dot.error { background: var(--red); }
+  .gist-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .gist-actions .btn {
+    flex: 1;
+    padding: 8px 12px;
+    font-size: 13px;
+    justify-content: center;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>⚡ 抄表助手</h1>
+  <div class="month-selector">
+    <select id="monthSelect"></select>
+    <span class="month-stats" id="monthStats">0 / 28</span>
+  </div>
+</div>
+
+<div class="view-total" id="viewTotal" style="display:none">
+  <div class="view-total-num" id="viewTotalNum">0</div>
+  <div class="view-total-label">本月合计用电（度）</div>
+</div>
+
+<!-- 抄表 tab -->
+<div class="tab-content active" id="tab-record">
+  <div id="floorList"></div>
+</div>
+
+<!-- 历史 tab -->
+<div class="tab-content" id="tab-history">
+  <div id="historyList"></div>
+</div>
+
+<!-- 设置 tab -->
+<div class="tab-content" id="tab-settings">
+  <div class="settings-group">
+    <div class="settings-title">数据管理</div>
+    <button class="settings-item" onclick="doShareData()">
+      <span class="icon">📤</span>
+      <span class="label">分享当月数据</span>
+      <span class="arrow-r">›</span>
+    </button>
+    <button class="settings-item" onclick="exportCSV()">
+      <span class="icon">📄</span>
+      <span class="label">导出 CSV（Excel 可打开）</span>
+      <span class="arrow-r">›</span>
+    </button>
+    <button class="settings-item" onclick="exportJSON()">
+      <span class="icon">💾</span>
+      <span class="label">备份全部数据（JSON）</span>
+      <span class="arrow-r">›</span>
+    </button>
+    <button class="settings-item" onclick="document.getElementById('importInput').click()">
+      <span class="icon">📥</span>
+      <span class="label">从备份恢复</span>
+      <span class="arrow-r">›</span>
+    </button>
+    <input type="file" id="importInput" accept=".json" style="display:none" onchange="importJSON(event)">
+  </div>
+
+  <!-- GitHub Gist 同步 -->
+  <div class="settings-group">
+    <div class="settings-title">GitHub 云同步</div>
+    <div class="gist-panel">
+      <input type="password" class="gist-input" id="gistTokenInput" placeholder="粘贴 GitHub Personal Access Token（需勾选 gist 权限）">
+      <div class="gist-actions">
+        <button class="btn primary" onclick="connectGist()" id="gistConnectBtn">连接</button>
+        <button class="btn" onclick="syncPush()" id="gistPushBtn">☁️ 上传</button>
+        <button class="btn" onclick="syncPull()" id="gistPullBtn">📥 下载</button>
+      </div>
+      <div class="gist-status" id="gistStatus">
+        <span class="gist-status-dot" id="gistStatusDot"></span>
+        <span id="gistStatusText">未连接</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="settings-group">
+    <div class="settings-title">显示设置</div>
+    <button class="settings-item" id="elderModeBtn" onclick="toggleElderMode()">
+      <span class="icon">👴</span>
+      <span class="label">老年版（大字模式）</span>
+      <span class="arrow-r">›</span>
+    </button>
+  </div>
+
+  <div class="settings-group">
+    <div class="settings-title">添加月份</div>
+    <button class="settings-item" onclick="addCustomMonth()">
+      <span class="icon">➕</span>
+      <span class="label">新增历史月份</span>
+      <span class="arrow-r">›</span>
+    </button>
+  </div>
+
+  <div class="settings-group">
+    <div class="settings-title">危险操作</div>
+    <button class="settings-item danger" onclick="clearMonth()">
+      <span class="icon">🗑</span>
+      <span class="label">清空当月数据</span>
+      <span class="arrow-r">›</span>
+    </button>
+    <button class="settings-item danger" onclick="clearAll()">
+      <span class="icon">⚠️</span>
+      <span class="label">清空全部数据</span>
+      <span class="arrow-r">›</span>
+    </button>
+  </div>
+
+  <div class="settings-group">
+    <div class="settings-title">关于</div>
+    <div style="padding: 8px 16px 16px; color: var(--ink-3); font-size: 13px; line-height: 1.7;">
+      抄表助手 v2.0<br>
+      28 户预配置 · 数据存本机 · 支持 GitHub Gist 云同步<br>
+      <span style="color: var(--ink-3);">建议每月导出 CSV 备份到网盘</span>
+    </div>
+  </div>
+</div>
+
+<div class="tab-bar">
+  <button class="tab active" data-tab="record">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+    抄表
+  </button>
+  <button class="tab" data-tab="history">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-5"/></svg>
+    历史
+  </button>
+  <button class="tab" data-tab="settings">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+    设置
+  </button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="modal-mask" id="modal">
+  <div class="modal">
+    <div class="modal-header" id="modalTitle"></div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-footer" id="modalFooter"></div>
+  </div>
+</div>
+
+<script>
+  // ============== 配置 ==============
+  const APARTMENTS = [
+    ...['101','102','103','商铺'].map(n => ({ num: n, floor: 1 })),
+    ...['201','202','203','204'].map(n => ({ num: n, floor: 2 })),
+    ...['301','302','303','304','305','306'].map(n => ({ num: n, floor: 3 })),
+    ...['401','402','403','404','405','406'].map(n => ({ num: n, floor: 4 })),
+    ...['501','502','503','504','505','506'].map(n => ({ num: n, floor: 5 })),
+    ...['601','602','603'].map(n => ({ num: n, floor: 6 })),
+  ];
+
+  const FLOOR_COLORS = {
+    1: 'var(--floor-1)', 2: 'var(--floor-2)', 3: 'var(--floor-3)',
+    4: 'var(--floor-4)', 5: 'var(--floor-5)', 6: 'var(--floor-6)',
+  };
+
+  const STORAGE_KEY = 'meter-reader-data-v1';
+  const CURRENT_MONTH_KEY = 'meter-reader-current-month';
+
+  // ============== 状态 ==============
+  let state = { readings: {} };
+  let currentMonth = '';
+
+  // ============== 初始数据（2026年3月抄表） ==============
+  const INITIAL_DATA = {
+    "101": { "2026-03": "5149" },
+    "102": { "2026-03": "2731" },
+    "103": { "2026-03": "1951" },
+    "商铺": { "2026-03": "5924" },
+    "201": { "2026-03": "1622" },
+    "202": { "2026-03": "6768" },
+    "203": { "2026-03": "2109" },
+    "204": { "2026-03": "1595" },
+    "301": { "2026-03": "7653" },
+    "302": { "2026-03": "33" },
+    "303": { "2026-03": "6269" },
+    "304": { "2026-03": "1596" },
+    "305": { "2026-03": "8150" },
+    "306": { "2026-03": "1390" },
+    "401": { "2026-03": "72" },
+    "402": { "2026-03": "7006" },
+    "403": { "2026-03": "2876" },
+    "404": { "2026-03": "4646" },
+    "405": { "2026-03": "3296" },
+    "406": { "2026-03": "2349" },
+    "501": { "2026-03": "3759" },
+    "502": { "2026-03": "6047" },
+    "503": { "2026-03": "3121" },
+    "504": { "2026-03": "4919" },
+    "505": { "2026-03": "1814" },
+    "506": { "2026-03": "5405" },
+    "601": { "2026-03": "7106" },
+    "602": { "2026-03": "4219" },
+    "603": { "2026-03": "3458" },
+  };
+
+  // ============== 存储 ==============
+  function load() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        state = JSON.parse(raw);
+        if (!state.readings) state.readings = {};
+      } else {
+        state.readings = {};
+      }
+      // 合并初始数据（确保3月数据总是存在）
+      for (const [num, months] of Object.entries(INITIAL_DATA)) {
+        if (!state.readings[num]) state.readings[num] = {};
+        for (const [month, value] of Object.entries(months)) {
+          if (!state.readings[num][month]) {
+            state.readings[num][month] = value;
+          }
+        }
+      }
+      save();
+    } catch (e) { console.error(e); }
+  }
+
+  function save() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch (e) {
+      console.error('保存失败:', e);
+      showToast('保存失败，存储空间可能已满');
+    }
+  }
+
+  // ============== 工具 ==============
+  function prevMonth(ym) {
+    const [y, m] = ym.split('-').map(Number);
+    const d = new Date(y, m - 2, 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  }
+
+  function prevReadingMonth(num, month) {
+    const rm = state.readings[num];
+    if (!rm) return null;
+    return Object.keys(rm)
+      .filter(m => m < month && rm[m] != null && rm[m] !== '')
+      .sort()
+      .pop() || null;
+  }
+
+  function fmtMonth(ym) {
+    const [y, m] = ym.split('-');
+    return `${y}年${parseInt(m)}月`;
+  }
+
+  const CONFIG = {
+    toastDuration: 1600,
+    usageWarningThreshold: 200,
+    meterMax: 10000,
+    floorColors: FLOOR_COLORS,
+    storageVersion: 1,
+  };
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => t.classList.remove('show'), CONFIG.toastDuration);
+  }
+
+  function calcUsage(current, prev) {
+    const diff = parseFloat(current) - parseFloat(prev);
+    return diff < 0 ? (CONFIG.meterMax + diff) : diff;
+  }
+
+  // ============== 月份选择器 ==============
+  function buildMonthOptions() {
+    const sel = document.getElementById('monthSelect');
+    const months = new Set();
+    Object.values(state.readings).forEach(rm => Object.keys(rm).forEach(m => months.add(m)));
+    // 默认当前月和过去 3 个月
+    const now = new Date();
+    for (let i = 0; i < 3; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      months.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+    }
+    const arr = [...months].sort().reverse();
+    sel.innerHTML = arr.map(m => `<option value="${m}">${fmtMonth(m)}</option>`).join('');
+
+    // 恢复选择，优先选中有数据的最新月份
+    const saved = localStorage.getItem(CURRENT_MONTH_KEY);
+    if (saved && arr.includes(saved)) {
+      sel.value = saved;
+      currentMonth = saved;
+    } else {
+      const monthsWithData = arr.filter(m => {
+        return APARTMENTS.some(a => {
+          const v = state.readings[a.num]?.[m];
+          return v != null && v !== '';
+        });
+      });
+      currentMonth = monthsWithData[0] || arr[0];
+      sel.value = currentMonth;
+    }
+
+    sel.onchange = () => {
+      currentMonth = sel.value;
+      localStorage.setItem(CURRENT_MONTH_KEY, currentMonth);
+      render();
+    };
+  }
+
+  // ============== 渲染 ==============
+  function render() {
+    renderRecord();
+    renderHistory();
+    updateStats();
+  }
+
+  function renderViewMode(data) {
+    document.body.classList.add('view-mode');
+    const totalEl = document.getElementById('viewTotal');
+    totalEl.style.display = 'block';
+    document.getElementById('viewTotalNum').textContent = data.total;
+    currentMonth = data.month;
+    document.getElementById('monthSelect').innerHTML = `<option value="${data.month}">${fmtMonth(data.month)}</option>`;
+    const list = document.getElementById('floorList');
+    const floors = {};
+    APARTMENTS.forEach(a => {
+      if (!floors[a.floor]) floors[a.floor] = [];
+      floors[a.floor].push(a);
+    });
+
+    list.innerHTML = Object.keys(floors).sort().map(f => {
+      const rooms = floors[f];
+      const roomsHtml = rooms.map((a) => {
+        const rd = data.readings[a.num];
+        if (!rd) {
+          return `
+            <div class="room" data-num="${a.num}">
+              <div class="room-num">${a.num}</div>
+              <div class="room-info">
+                <div class="room-usage" style="color:var(--ink-3)">未抄表</div>
+              </div>
+            </div>
+          `;
+        }
+        const current = rd.current;
+        const prev = rd.prev;
+        let usageHtml = '';
+        if (prev != null && prev !== '' && !isNaN(current) && !isNaN(prev)) {
+          const usage = calcUsage(current, prev).toFixed(1);
+          const cls = parseFloat(usage) < 0 ? 'danger' : 'has-value';
+          usageHtml = `<div class="room-usage ${cls}">用电 ${usage} 度</div>`;
+        } else {
+          usageHtml = `<div class="room-usage first">首次抄表</div>`;
+        }
+        return `
+          <div class="room" data-num="${a.num}">
+            <div class="room-num">${a.num}</div>
+            <div class="room-info">
+              ${usageHtml}
+            </div>
+          </div>
+        `;
+      }).join('');
+      return `
+        <div class="floor-section" style="--floor-color: ${FLOOR_COLORS[f]}; margin-bottom:8px;">
+          <div class="floor-header" style="padding:12px 16px;">
+            <span class="floor-tag">${f}F</span>
+            <span>${f} 层</span>
+          </div>
+          <div class="rooms">${roomsHtml}</div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function renderRecord() {
+    const list = document.getElementById('floorList');
+    const floors = {};
+    APARTMENTS.forEach(a => {
+      if (!floors[a.floor]) floors[a.floor] = [];
+      floors[a.floor].push(a);
+    });
+
+    list.innerHTML = Object.keys(floors).sort().map(f => {
+      const rooms = floors[f];
+      const roomsHtml = rooms.map((a) => {
+        const val = state.readings[a.num]?.[currentMonth];
+        const prevM = prevReadingMonth(a.num, currentMonth);
+        const prev = prevM ? state.readings[a.num][prevM] : null;
+        let usageHtml = '';
+        if (val != null && val !== '') {
+          if (prev != null && prev !== '' && !isNaN(val) && !isNaN(prev)) {
+            const diff = parseFloat(val) - parseFloat(prev);
+            const isRollover = diff < 0;
+            const u = isRollover ? (CONFIG.meterMax + diff).toFixed(1) : diff.toFixed(1);
+            const cls = isRollover ? 'rollover' : (parseFloat(u) > CONFIG.usageWarningThreshold ? 'warn' : 'has-value');
+            const label = isRollover ? '翻表' : '用电';
+            usageHtml = `<div class="room-usage ${cls}">${label} ${u} 度</div>`;
+          } else {
+            usageHtml = `<div class="room-usage first">首次抄表</div>`;
+          }
+        } else {
+          const lastM = prevReadingMonth(a.num, currentMonth);
+          if (lastM) {
+            const lastV = state.readings[a.num][lastM];
+            usageHtml = `<div class="room-usage">上次 ${fmtMonth(lastM).slice(5)}: ${lastV}</div>`;
+          } else {
+            usageHtml = `<div class="room-usage">未抄表</div>`;
+          }
+        }
+        return `
+          <div class="room" data-num="${a.num}">
+            <div class="room-num">${a.num}</div>
+            <div class="room-info">
+              <div class="room-last">${prev != null && prev !== '' ? `上次(${fmtMonth(prevM).slice(5)}): ${prev}` : '无历史数据'}</div>
+              ${usageHtml}
+            </div>
+            <input type="text" inputmode="decimal" data-num="${a.num}"
+                   value="${val != null ? val : ''}"
+                   placeholder="读数"
+                   oninput="onInput(this)"
+                   onfocus="this.select()"
+                   onkeydown="onKeyDown(event, this)">
+          </div>
+        `;
+      }).join('');
+
+      return `
+        <div class="floor-section" style="--floor-color: ${CONFIG.floorColors[f]}">
+          <div class="floor-header" onclick="toggleFloor(this)">
+            <span class="floor-tag">${f}F</span>
+            <span>${f} 层 · ${rooms.length} 户</span>
+            <span class="floor-stats" data-floor="${f}"></span>
+            <span class="arrow">▾</span>
+          </div>
+          <div class="rooms">${roomsHtml}</div>
+        </div>
+      `;
+    }).join('');
+
+    updateFloorStats();
+  }
+
+  function updateFloorStats() {
+    const stats = {};
+    APARTMENTS.forEach(a => {
+      const v = state.readings[a.num]?.[currentMonth];
+      if (v != null && v !== '') {
+        stats[a.floor] = (stats[a.floor] || 0) + 1;
+      }
+    });
+    document.querySelectorAll('[data-floor]').forEach(el => {
+      const f = el.dataset.floor;
+      el.textContent = stats[f] ? `${stats[f]} 户已抄` : '';
+    });
+  }
+
+  function updateStats() {
+    const filled = APARTMENTS.filter(a => {
+      const v = state.readings[a.num]?.[currentMonth];
+      return v != null && v !== '';
+    }).length;
+    document.getElementById('monthStats').textContent = `${filled} / ${APARTMENTS.length}`;
+  }
+
+  function toggleFloor(header) {
+    header.parentElement.classList.toggle('collapsed');
+  }
+
+  function onInput(input) {
+    const num = input.dataset.num;
+    let val = input.value.replace(/[^\d.]/g, '');
+    const dotIdx = val.indexOf('.');
+    if (dotIdx !== -1) {
+      val = val.slice(0, dotIdx + 1) + val.slice(dotIdx + 1).replace(/\./g, '');
+    }
+    if (input.value !== val) input.value = val;
+
+    if (!state.readings[num]) state.readings[num] = {};
+    if (val === '') {
+      delete state.readings[num][currentMonth];
+    } else {
+      state.readings[num][currentMonth] = val;
+    }
+    save();
+    updateStats();
+    updateFloorStats();
+
+    const room = input.closest('.room');
+    const prevM = prevReadingMonth(num, currentMonth);
+    const prev = prevM ? state.readings[num][prevM] : null;
+    const usageEl = room.querySelector('.room-usage');
+    const lastEl = room.querySelector('.room-last');
+    if (lastEl) lastEl.textContent = (prev != null && prev !== '') ? `上次(${fmtMonth(prevM).slice(5)}): ${prev}` : '无历史数据';
+    if (val === '' || isNaN(val)) {
+      const lastM = prevReadingMonth(num, currentMonth);
+      usageEl.className = 'room-usage';
+      usageEl.textContent = lastM ? `上次 ${fmtMonth(lastM).slice(5)}: ${state.readings[num][lastM]}` : '未抄表';
+      room.classList.remove('saved');
+    } else if (prev != null && prev !== '' && !isNaN(prev)) {
+      const diff = parseFloat(val) - parseFloat(prev);
+      const isRollover = diff < 0;
+      const u = isRollover ? (CONFIG.meterMax + diff).toFixed(1) : diff.toFixed(1);
+      const cls = isRollover ? 'rollover' : (parseFloat(u) > CONFIG.usageWarningThreshold ? 'warn' : 'has-value');
+      const label = isRollover ? '翻表' : '用电';
+      usageEl.className = 'room-usage ' + cls;
+      usageEl.textContent = `${label} ${u} 度`;
+      room.classList.toggle('saved', true);
+    } else {
+      usageEl.className = 'room-usage first';
+      usageEl.textContent = '首次抄表';
+      room.classList.add('saved');
+    }
+  }
+
+  function onKeyDown(e, input) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const num = input.dataset.num;
+      const idx = APARTMENTS.findIndex(a => a.num === num);
+      if (idx < APARTMENTS.length - 1) {
+        const nextNum = APARTMENTS[idx + 1].num;
+        const nextInput = document.querySelector(`input[data-num="${nextNum}"]`);
+        if (nextInput) {
+          nextInput.focus();
+          const el = nextInput.closest('.floor-section');
+          if (el && el.classList.contains('collapsed')) {
+            el.classList.remove('collapsed');
+          }
+          nextInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } else {
+        input.blur();
+        showToast('已到最后一户');
+      }
+    }
+  }
+
+  // ============== 渲染：历史 ==============
+  function renderHistory() {
+    const list = document.getElementById('historyList');
+    const monthSet = new Set();
+    Object.values(state.readings).forEach(rm => Object.keys(rm).forEach(m => monthSet.add(m)));
+    const months = [...monthSet].sort().reverse();
+
+    if (months.length === 0) {
+      list.innerHTML = `<div class="empty"><div class="emoji">📋</div>暂无历史记录<br><span style="font-size:12px">先在"抄表"标签录入读数</span></div>`;
+      return;
+    }
+
+    list.innerHTML = months.map(m => {
+      const rows = APARTMENTS.map(a => {
+        const v = state.readings[a.num]?.[m];
+        const prevM = prevReadingMonth(a.num, m);
+        const prev = prevM ? state.readings[a.num][prevM] : null;
+        let usage = '';
+        if (v != null && v !== '' && prev != null && prev !== '' && !isNaN(v) && !isNaN(prev)) {
+          const diff = parseFloat(v) - parseFloat(prev);
+          const isRollover = diff < 0;
+          const u = isRollover ? (CONFIG.meterMax + diff).toFixed(1) : diff.toFixed(1);
+          const cls = isRollover ? 'style="color:var(--accent)"' : '';
+          usage = `<span class="history-row-usage" ${cls}>${u} 度</span>`;
+        }
+        return `
+          <div class="history-row">
+            <span class="history-row-num">${a.num}</span>
+            <span class="history-row-val">${v != null && v !== '' ? v : '—'}</span>
+            ${usage || '<span class="history-row-usage" style="color:var(--ink-3)">—</span>'}
+          </div>
+        `;
+      }).join('');
+
+      let total = 0, hasUsage = false;
+      APARTMENTS.forEach(a => {
+        const v = state.readings[a.num]?.[m];
+        const prevM = prevReadingMonth(a.num, m);
+        const prev = prevM ? state.readings[a.num][prevM] : null;
+        if (v != null && prev != null && !isNaN(v) && !isNaN(prev)) {
+          total += calcUsage(v, prev);
+          hasUsage = true;
+        }
+      });
+
+      return `
+        <div class="history-month">
+          <div class="history-month-header">
+            <span class="history-month-title">${fmtMonth(m)}</span>
+            <span class="history-month-total">${hasUsage ? '合计 ' + total.toFixed(1) + ' 度' : ''}</span>
+          </div>
+          ${rows}
+        </div>
+      `;
+    }).join('');
+  }
+
+  // ============== 编码工具 ==============
+  function encodeBase64UTF8(str) {
+    return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (_, p1) =>
+      String.fromCharCode(parseInt(p1, 16))
+    ));
+  }
+
+  function decodeBase64UTF8(b64) {
+    return decodeURIComponent(
+      atob(b64).split('').map(c =>
+        '%' + c.charCodeAt(0).toString(16).padStart(2, '0')
+      ).join('')
+    );
+  }
+
+  // ============== 导出 / 导入 / 分享 ==============
+  function doShareData() {
+    if (!state.readings || Object.keys(state.readings).length === 0) {
+      load();
+    }
+    const filled = APARTMENTS.filter(a => {
+      const v = state.readings[a.num]?.[currentMonth];
+      return v != null && v !== '';
+    });
+    if (filled.length === 0) {
+      showToast(`【${fmtMonth(currentMonth)}】暂无抄表数据，请先在抄表页录入`);
+      return;
+    }
+
+    let totalUsage = 0;
+    const payload = { month: currentMonth, readings: {}, total: 0 };
+    filled.forEach(a => {
+      const v = state.readings[a.num][currentMonth];
+      const prevM = prevReadingMonth(a.num, currentMonth);
+      const prev = prevM ? state.readings[a.num][prevM] : null;
+      payload.readings[a.num] = { current: v, prev: prev || null };
+      if (prev != null && prev !== '' && !isNaN(v) && !isNaN(prev)) {
+        totalUsage += calcUsage(v, prev);
+      }
+    });
+    payload.total = totalUsage.toFixed(1);
+
+    const jsonStr = JSON.stringify(payload);
+    const encoded = encodeURIComponent(encodeBase64UTF8(jsonStr));
+    const shareUrl = location.href.split('?')[0] + '?d=' + encoded;
+
+    let text = `${fmtMonth(currentMonth)} 抄表数据\n`;
+    text += '='.repeat(20) + '\n\n';
+    filled.forEach(a => {
+      const v = state.readings[a.num][currentMonth];
+      const prevM = prevReadingMonth(a.num, currentMonth);
+      const prev = prevM ? state.readings[a.num][prevM] : null;
+      let usage = '-';
+      if (prev != null && prev !== '' && !isNaN(v) && !isNaN(prev)) {
+        usage = calcUsage(v, prev).toFixed(1);
+      }
+      text += `${a.num}: ${usage} 度\n`;
+    });
+    text += '\n合计: ' + totalUsage.toFixed(1) + ' 度\n';
+    text += '时间: ' + new Date().toLocaleString('zh-CN');
+
+    const body = `
+      <div style="margin-bottom:12px;padding:10px 14px;background:var(--accent-dim);border-radius:var(--radius-sm);font-size:13px;color:var(--accent);font-weight:600;border:1px solid var(--accent-border);">
+        当前分享月份：${fmtMonth(currentMonth)}（${filled.length} 户已抄）
+      </div>
+      <div style="margin-bottom:16px;padding:16px;background:var(--bg-soft);border-radius:var(--radius-md);font-size:14px;border:1px solid var(--border);">
+        <div style="font-weight:600;margin-bottom:8px;color:var(--ink);">📱 发链接给老人查看</div>
+        <div style="font-size:12px;color:var(--ink-3);margin-bottom:12px;">老人点开链接即可看到抄表结果，无需任何操作</div>
+        <textarea id="shareUrl" style="width:100%;height:60px;padding:8px;font-size:13px;border:1px solid var(--border);border-radius:var(--radius-sm);resize:none;background:var(--bg);color:var(--ink);font-family:monospace;" readonly>${shareUrl}</textarea>
+      </div>
+      <div style="padding:16px;background:var(--bg-soft);border-radius:var(--radius-md);font-size:14px;border:1px solid var(--border);">
+        <div style="font-weight:600;margin-bottom:8px;color:var(--ink);">📝 或复制文本发送</div>
+        <textarea id="shareText" style="width:100%;height:200px;padding:8px;font-size:13px;border:1px solid var(--border);border-radius:var(--radius-sm);resize:none;background:var(--bg);color:var(--ink);font-family:monospace;" readonly>${text}</textarea>
+      </div>
+    `;
+
+    showModal('分享当月数据', body, [
+      { text: '复制链接', class: 'primary', onclick: () => copyToClipboard(shareUrl) },
+      { text: '复制文本', class: 'ghost', onclick: () => copyToClipboard(text) },
+      { text: '关闭', class: 'ghost', onclick: closeModal }
+    ]);
+  }
+
+  async function copyToClipboard(text) {
+    try {
+      await navigator.clipboard.writeText(text);
+      showToast('已复制到剪贴板');
+      closeModal();
+    } catch (err) {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      showToast('已复制到剪贴板');
+      closeModal();
+    }
+  }
+
+  function toggleElderMode() {
+    const body = document.body;
+    const isElder = body.classList.toggle('elder-mode');
+    localStorage.setItem('elder-mode', isElder ? '1' : '0');
+    showToast(isElder ? '已开启老人模式' : '已关闭老人模式');
+  }
+
+  function exportCSV() {
+    const months = new Set();
+    Object.values(state.readings).forEach(rm => Object.keys(rm).forEach(m => months.add(m)));
+    const sortedMonths = [...months].sort();
+    const csvCell = s => {
+      s = String(s ?? '');
+      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    let csv = '\ufeff房号,' + sortedMonths.map(fmtMonth).join(',') + ',合计用电(度)\n';
+    APARTMENTS.forEach(a => {
+      const cells = sortedMonths.map(m => {
+        const v = state.readings[a.num]?.[m];
+        if (v == null || v === '') return '';
+        const prevM = prevReadingMonth(a.num, m);
+        const prev = prevM ? state.readings[a.num][prevM] : null;
+        if (prev != null && prev !== '' && !isNaN(v) && !isNaN(prev)) {
+          return calcUsage(v, prev).toFixed(1);
+        }
+        return v + '*';
+      });
+      const total = cells.filter(c => c && !c.endsWith('*')).reduce((s, c) => s + parseFloat(c), 0);
+      csv += `${csvCell(a.num)},${cells.map(csvCell).join(',')},${total.toFixed(1)}\n`;
+    });
+    download(`抄表数据_${new Date().toISOString().slice(0,10)}.csv`, csv, 'text/csv;charset=utf-8');
+    showToast('CSV 已导出');
+  }
+
+  function exportJSON() {
+    const data = JSON.stringify(state, null, 2);
+    download(`抄表备份_${new Date().toISOString().slice(0,10)}.json`, data, 'application/json');
+    showToast('备份已导出');
+  }
+
+  function importJSON(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const obj = JSON.parse(ev.target.result);
+        if (!validateBackup(obj)) {
+          throw new Error('备份文件格式不正确');
+        }
+        showModal('确认恢复', '将覆盖当前所有数据，确定从备份恢复？', [
+          { text: '取消', class: 'ghost', onclick: closeModal },
+          { text: '恢复', class: 'primary', onclick: () => {
+            migrateData(obj);
+            state = obj;
+            save();
+            buildMonthOptions();
+            render();
+            closeModal();
+            showToast('已恢复，请及时导出备份');
+          }}
+        ]);
+      } catch (err) {
+        showToast('文件格式错误');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  }
+
+  function validateBackup(obj) {
+    if (!obj || typeof obj !== 'object') return false;
+    if (!obj.readings || typeof obj.readings !== 'object') return false;
+    for (const [num, months] of Object.entries(obj.readings)) {
+      if (typeof months !== 'object') return false;
+      for (const [month, value] of Object.entries(months)) {
+        if (typeof value !== 'string') return false;
+        if (!/^\d+(\.\d+)?$/.test(value)) return false;
+      }
+    }
+    return true;
+  }
+
+  function migrateData(obj) {
+    if (!obj.version) {
+      obj.version = CONFIG.storageVersion;
+    }
+  }
+
+  function download(name, content, type) {
+    const blob = new Blob([content], { type });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = name; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  // ============== Modal ==============
+  function showModal(title, body, buttons) {
+    document.getElementById('modalTitle').textContent = title;
+    document.getElementById('modalBody').innerHTML = body;
+    const footer = document.getElementById('modalFooter');
+    footer.innerHTML = '';
+    buttons.forEach(b => {
+      const btn = document.createElement('button');
+      btn.className = 'btn ' + (b.class || '');
+      btn.textContent = b.text;
+      btn.onclick = b.onclick;
+      footer.appendChild(btn);
+    });
+    document.getElementById('modal').classList.add('show');
+  }
+
+  function closeModal() {
+    document.getElementById('modal').classList.remove('show');
+  }
+
+  function addCustomMonth() {
+    const val = prompt('输入月份 (格式 YYYY-MM)，例如 2025-11');
+    if (!val) return;
+    if (!/^\d{4}-\d{2}$/.test(val)) { showToast('格式错误'); return; }
+    currentMonth = val;
+    localStorage.setItem(CURRENT_MONTH_KEY, currentMonth);
+    buildMonthOptions();
+    render();
+    switchTab('record');
+  }
+
+  function clearMonth() {
+    showModal('清空当月', `将清空 <b>${fmtMonth(currentMonth)}</b> 的所有读数，确定？`, [
+      { text: '取消', class: 'ghost', onclick: closeModal },
+      { text: '清空', class: 'danger', onclick: () => {
+        APARTMENTS.forEach(a => {
+          if (state.readings[a.num]) delete state.readings[a.num][currentMonth];
+        });
+        save();
+        render();
+        closeModal();
+        showToast('已清空');
+      }}
+    ]);
+  }
+
+  function clearAll() {
+    showModal('清空全部', '所有历史数据将被永久删除，无法恢复！', [
+      { text: '取消', class: 'ghost', onclick: closeModal },
+      { text: '确认清空', class: 'danger', onclick: () => {
+        state = { readings: {} };
+        save();
+        buildMonthOptions();
+        render();
+        closeModal();
+        showToast('已清空');
+      }}
+    ]);
+  }
+
+  // ============== Tabs ==============
+  function switchTab(name) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('active', c.id === 'tab-' + name));
+  }
+
+  document.querySelectorAll('.tab').forEach(t => {
+    t.onclick = () => switchTab(t.dataset.tab);
+  });
+
+  // ============== GitHub Gist 同步 ==============
+  const GIST_TOKEN_KEY = 'meter-reader-gist-token';
+  const GIST_ID_KEY = 'meter-reader-gist-id';
+
+  function updateGistStatus(status, text) {
+    const dot = document.getElementById('gistStatusDot');
+    const txt = document.getElementById('gistStatusText');
+    dot.className = 'gist-status-dot';
+    if (status === 'connected') dot.classList.add('connected');
+    if (status === 'error') dot.classList.add('error');
+    txt.textContent = text;
+  }
+
+  function initGistUI() {
+    const token = localStorage.getItem(GIST_TOKEN_KEY);
+    const gistId = localStorage.getItem(GIST_ID_KEY);
+    if (token) {
+      document.getElementById('gistTokenInput').value = token;
+    }
+    if (token && gistId) {
+      updateGistStatus('connected', `已连接 · Gist ID: ${gistId.slice(0,8)}...`);
+    } else if (token) {
+      updateGistStatus('', 'Token 已保存，点击连接');
+    } else {
+      updateGistStatus('', '未连接');
+    }
+  }
+
+  async function connectGist() {
+    const token = document.getElementById('gistTokenInput').value.trim();
+    if (!token) {
+      showToast('请输入 GitHub Token');
+      return;
+    }
+    localStorage.setItem(GIST_TOKEN_KEY, token);
+    showToast('正在验证...');
+
+    try {
+      const res = await fetch('https://api.github.com/gists', {
+        headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' }
+      });
+      if (!res.ok) throw new Error('Token 验证失败');
+      updateGistStatus('connected', 'Token 验证成功');
+      showToast('连接成功');
+    } catch (err) {
+      updateGistStatus('error', '连接失败: ' + err.message);
+      showToast('连接失败');
+    }
+  }
+
+  async function syncPush() {
+    const token = localStorage.getItem(GIST_TOKEN_KEY);
+    if (!token) { showToast('请先配置 GitHub Token'); return; }
+
+    showToast('正在上传...');
+    try {
+      const gistId = localStorage.getItem(GIST_ID_KEY);
+      const content = JSON.stringify(state, null, 2);
+
+      if (gistId) {
+        const res = await fetch(`https://api.github.com/gists/${gistId}`, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `token ${token}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/vnd.github.v3+json'
+          },
+          body: JSON.stringify({
+            files: {
+              'meter-reader-data.json': { content }
+            }
+          })
+        });
+        if (!res.ok) throw new Error('更新失败');
+        const data = await res.json();
+        localStorage.setItem(GIST_ID_KEY, data.id);
+        updateGistStatus('connected', `已同步 · ${new Date().toLocaleString('zh-CN')}`);
+        showToast('上传成功');
+      } else {
+        const res = await fetch('https://api.github.com/gists', {
+          method: 'POST',
+          headers: {
+            'Authorization': `token ${token}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/vnd.github.v3+json'
+          },
+          body: JSON.stringify({
+            description: '抄表助手数据备份',
+            public: false,
+            files: {
+              'meter-reader-data.json': { content }
+            }
+          })
+        });
+        if (!res.ok) throw new Error('创建失败');
+        const data = await res.json();
+        localStorage.setItem(GIST_ID_KEY, data.id);
+        updateGistStatus('connected', `已创建 · ${new Date().toLocaleString('zh-CN')}`);
+        showToast('上传成功');
+      }
+    } catch (err) {
+      updateGistStatus('error', '上传失败: ' + err.message);
+      showToast('上传失败');
+    }
+  }
+
+  async function syncPull() {
+    const token = localStorage.getItem(GIST_TOKEN_KEY);
+    const gistId = localStorage.getItem(GIST_ID_KEY);
+    if (!token) { showToast('请先配置 GitHub Token'); return; }
+    if (!gistId) { showToast('请先上传一次以创建 Gist'); return; }
+
+    showToast('正在下载...');
+    try {
+      const res = await fetch(`https://api.github.com/gists/${gistId}`, {
+        headers: {
+          'Authorization': `token ${token}`,
+          'Accept': 'application/vnd.github.v3+json'
+        }
+      });
+      if (!res.ok) throw new Error('获取失败');
+      const data = await res.json();
+      const file = data.files['meter-reader-data.json'];
+      if (!file) throw new Error('找不到数据文件');
+      const obj = JSON.parse(file.content);
+      if (!validateBackup(obj)) throw new Error('数据格式不正确');
+
+      showModal('确认覆盖', `云端数据更新时间：${new Date(data.updated_at).toLocaleString('zh-CN')}\n确定用云端数据覆盖本地？`, [
+        { text: '取消', class: 'ghost', onclick: closeModal },
+        { text: '覆盖', class: 'primary', onclick: () => {
+          state = obj;
+          save();
+          buildMonthOptions();
+          render();
+          closeModal();
+          updateGistStatus('connected', `已同步 · ${new Date().toLocaleString('zh-CN')}`);
+          showToast('下载成功');
+        }}
+      ]);
+    } catch (err) {
+      updateGistStatus('error', '下载失败: ' + err.message);
+      showToast('下载失败');
+    }
+  }
+
+  // ============== 启动 ==============
+  function parseViewData() {
+    const params = new URLSearchParams(location.search);
+    const d = params.get('d');
+    if (d) {
+      try {
+        const jsonStr = decodeBase64UTF8(decodeURIComponent(d));
+        const data = JSON.parse(jsonStr);
+        if (data.month && data.readings) {
+          renderViewMode(data);
+          return true;
+        }
+      } catch (e) {
+        console.error('解析分享数据失败:', e);
+        showToast('链接数据已过期');
+      }
+    }
+    return false;
+  }
+
+  if (!parseViewData()) {
+    load();
+    buildMonthOptions();
+    render();
+    initGistUI();
+  }
+
+  const elderMode = localStorage.getItem('elder-mode');
+  if (elderMode === '1') {
+    document.body.classList.add('elder-mode');
+  }
+</script>
+
+</body>
+</html>
