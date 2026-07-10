@@ -1533,6 +1533,31 @@
     }
   }
 
+  // 在匹配的备份 Gist 中挑选“数据最全”的一份：月份多的优先，并列时取最新更新的
+  function gistMonthCount(g) {
+    try {
+      const f = g.files && g.files['meter-reader-data.json'];
+      if (!f || !f.content) return -1;
+      const o = JSON.parse(f.content);
+      let n = 0;
+      if (o.readings) Object.values(o.readings).forEach(m => { if (m && typeof m === 'object') n += Object.keys(m).length; });
+      return n;
+    } catch (e) { return -1; }
+  }
+  function pickBestGist(gists) {
+    const backups = (gists || []).filter(g =>
+      (g.files && g.files['meter-reader-data.json']) ||
+      (g.description && g.description.indexOf('抄表助手数据备份') !== -1)
+    );
+    if (!backups.length) return null;
+    backups.sort((a, b) => {
+      const ca = gistMonthCount(a), cb = gistMonthCount(b);
+      if (cb !== ca) return cb - ca;
+      return new Date(b.updated_at) - new Date(a.updated_at);
+    });
+    return backups[0];
+  }
+
   async function connectGist() {
     const token = document.getElementById('gistTokenInput').value.trim();
     if (!token) {
@@ -1551,17 +1576,10 @@
 
       // 自动查找已有的备份 Gist（跨设备可复用，无需手动记录 ID）
       // 仅靠 Token 即可在新设备上定位云端数据，避免“登录后拉不到数据”
-      let gistId = localStorage.getItem(GIST_ID_KEY);
-      if (!gistId) {
-        const found = gists.find(g =>
-          (g.files && g.files['meter-reader-data.json']) ||
-          (g.description && g.description.indexOf('抄表助手数据备份') !== -1)
-        );
-        if (found) {
-          gistId = found.id;
-          localStorage.setItem(GIST_ID_KEY, gistId);
-        }
-      }
+      // 始终重新挑选数据最全的备份 Gist，避免被本机旧 ID 锁死到残缺备份
+      const best = pickBestGist(gists);
+      let gistId = best ? best.id : null;
+      if (gistId) localStorage.setItem(GIST_ID_KEY, gistId);
 
       if (gistId) {
         updateGistStatus('connected', `已连接 · Gist ID: ${gistId.slice(0, 8)}...`);
@@ -1582,50 +1600,72 @@
 
     showToast('正在上传...');
     try {
-      const gistId = localStorage.getItem(GIST_ID_KEY);
-      const content = JSON.stringify(state, null, 2);
+      // 1) 定位当前有效的备份 Gist：优先用本机记录，但先验证是否仍有效；失效则枚举复用已有备份
+      let gistId = localStorage.getItem(GIST_ID_KEY);
+      if (gistId) {
+        const chk = await fetch(`https://api.github.com/gists/${gistId}`, {
+          headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' }
+        });
+        if (!chk.ok) gistId = null; // 记录已删除/失效
+      }
+      if (!gistId) {
+        try {
+          const r = await fetch('https://api.github.com/gists', {
+            headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' }
+          });
+          if (r.ok) { const gs = await r.json(); const best = pickBestGist(gs); if (best) gistId = best.id; }
+        } catch (_) {}
+      }
 
+      // 2) 合并上传：先拉云端已有数据，与本地合并后再写回，避免覆盖掉其它设备的记录（如 6 月）
+      let payload = state;
+      if (gistId) {
+        try {
+          const cur = await fetch(`https://api.github.com/gists/${gistId}`, {
+            headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' }
+          });
+          if (cur.ok) {
+            const cj = await cur.json();
+            const cf = cj.files && cj.files['meter-reader-data.json'];
+            if (cf && cf.content) {
+              const cloud = JSON.parse(cf.content);
+              if (validateBackup(cloud)) {
+                const base = { ...state };
+                base.readings = mergeReadings(cloud, state).readings;
+                payload = base;
+              }
+            }
+          }
+        } catch (_) {}
+      }
+      const content = JSON.stringify(payload, null, 2);
+
+      const headers = {
+        'Authorization': `token ${token}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/vnd.github.v3+json'
+      };
+      let data;
       if (gistId) {
         const res = await fetch(`https://api.github.com/gists/${gistId}`, {
           method: 'PATCH',
-          headers: {
-            'Authorization': `token ${token}`,
-            'Content-Type': 'application/json',
-            'Accept': 'application/vnd.github.v3+json'
-          },
-          body: JSON.stringify({
-            files: {
-              'meter-reader-data.json': { content }
-            }
-          })
+          headers,
+          body: JSON.stringify({ files: { 'meter-reader-data.json': { content } } })
         });
         if (!res.ok) throw new Error('更新失败');
-        const data = await res.json();
-        localStorage.setItem(GIST_ID_KEY, data.id);
-        updateGistStatus('connected', `已同步 · ${new Date().toLocaleString('zh-CN')}`);
-        showToast('上传成功');
+        data = await res.json();
       } else {
         const res = await fetch('https://api.github.com/gists', {
           method: 'POST',
-          headers: {
-            'Authorization': `token ${token}`,
-            'Content-Type': 'application/json',
-            'Accept': 'application/vnd.github.v3+json'
-          },
-          body: JSON.stringify({
-            description: '抄表助手数据备份',
-            public: false,
-            files: {
-              'meter-reader-data.json': { content }
-            }
-          })
+          headers,
+          body: JSON.stringify({ description: '抄表助手数据备份', public: false, files: { 'meter-reader-data.json': { content } } })
         });
         if (!res.ok) throw new Error('创建失败');
-        const data = await res.json();
-        localStorage.setItem(GIST_ID_KEY, data.id);
-        updateGistStatus('connected', `已创建 · ${new Date().toLocaleString('zh-CN')}`);
-        showToast('上传成功');
+        data = await res.json();
       }
+      localStorage.setItem(GIST_ID_KEY, data.id);
+      updateGistStatus('connected', `已同步 · ${new Date().toLocaleString('zh-CN')}`);
+      showToast('上传成功');
     } catch (err) {
       updateGistStatus('error', '上传失败: ' + err.message);
       showToast('上传失败');
