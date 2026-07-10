@@ -138,7 +138,12 @@
     position: sticky;
     top: 0;
     z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
   }
+  .header h1 { flex-shrink: 0; }
 
   .header h1 {
     margin: 0 0 8px;
@@ -659,6 +664,51 @@
     font-size: 13px;
     justify-content: center;
   }
+  .gist-hint {
+    font-size: 11px;
+    color: var(--ink-3);
+    margin-top: 8px;
+    line-height: 1.5;
+  }
+  /* 顶栏常驻云同步指示器 */
+  .sync-indicator {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    margin-left: auto;
+    transition: transform 0.15s;
+  }
+  .sync-indicator:active { transform: scale(0.9); }
+  .sync-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--ink-3);
+    transition: background 0.3s;
+  }
+  .sync-dot.connected { background: var(--green); box-shadow: 0 0 8px rgba(120,140,93,0.6); }
+  .sync-dot.error { background: var(--red); }
+  .sync-dot.syncing { background: var(--accent); animation: sync-pulse 1s ease-in-out infinite; }
+  @keyframes sync-pulse {
+    0% { transform: scale(0.55); opacity: 0.45; }
+    50% { transform: scale(1); opacity: 1; }
+    100% { transform: scale(0.55); opacity: 0.45; }
+  }
+  .modal-body pre.conflict-list {
+    white-space: pre-wrap;
+    font-size: 13px;
+    line-height: 1.7;
+    background: rgba(0,0,0,0.18);
+    padding: 10px 12px;
+    border-radius: 8px;
+    margin: 10px 0 4px;
+  }
 </style>
 </head>
 <body>
@@ -669,6 +719,9 @@
     <select id="monthSelect"></select>
     <span class="month-stats" id="monthStats">0 / 28</span>
   </div>
+  <button class="sync-indicator" id="syncIndicator" title="云同步状态（点击查看）" onclick="showSyncInfo()">
+    <span class="sync-dot" id="syncDot"></span>
+  </button>
 </div>
 
 <div class="view-total" id="viewTotal" style="display:none">
@@ -727,6 +780,7 @@
         <span class="gist-status-dot" id="gistStatusDot"></span>
         <span id="gistStatusText">未连接</span>
       </div>
+      <div class="gist-hint">🔒 Token 仅保存在本机浏览器，只需 gist 权限（不要勾 repo），不会上传到任何服务器</div>
     </div>
   </div>
 
@@ -883,6 +937,18 @@
       console.error('保存失败:', e);
       showToast('保存失败，存储空间可能已满');
     }
+    scheduleAutoPush();
+  }
+
+  // 本地数据变更后，防抖自动合并上传到云端（静默，不打扰）
+  function scheduleAutoPush() {
+    if (!autoPushEnabled || suppressAutoPush) return;
+    const token = localStorage.getItem(GIST_TOKEN_KEY);
+    if (!token) return; // 未配置 Token 则不自动传
+    clearTimeout(autoPushTimer);
+    autoPushTimer = setTimeout(() => {
+      syncPush({ silent: true });
+    }, AUTO_PUSH_DEBOUNCE);
   }
 
   // ============== 工具 ==============
@@ -1455,6 +1521,29 @@
     document.getElementById('modal').classList.remove('show');
   }
 
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+
+  // 顶栏云图标点击：展示同步状态详情
+  function showSyncInfo() {
+    const token = localStorage.getItem(GIST_TOKEN_KEY);
+    if (!token) {
+      showToast('尚未配置 Token，无法云同步');
+      return;
+    }
+    const gistId = localStorage.getItem(GIST_ID_KEY) || '';
+    const lines = [
+      `状态：${gistId ? '已连接' : '未连接'}`,
+      `上次同步：${lastSyncAt ? lastSyncAt.toLocaleString('zh-CN') : '—'}`,
+      `本地条数：${countReadings(state)}`,
+      `云端条数：${lastCloudCount != null ? lastCloudCount : '—'}`,
+      lastConflictCount ? `上次合并冲突：${lastConflictCount} 处（已采用云端值）` : '上次合并无冲突',
+      `Gist：${gistId ? gistId.slice(0, 8) + '...' : '—'}`
+    ];
+    showModal('云同步状态', lines.join('\n'), [{ text: '知道了', class: 'primary', onclick: closeModal }]);
+  }
+
   function addCustomMonth() {
     const val = prompt('输入月份 (格式 YYYY-MM)，例如 2025-11');
     if (!val) return;
@@ -1510,6 +1599,14 @@
   const GIST_ID_KEY = 'meter-reader-gist-id';
   const GIST_LAST_SYNC_KEY = 'meter-reader-gist-lastsync';
   const GIST_AUTO_SYNC_INTERVAL = 20000; // 启动自动同步最小间隔（ms），避免频繁刷新狂打 GitHub API
+  const AUTO_PUSH_DEBOUNCE = 3000; // 本地改动后自动回传的防抖时长（ms）
+
+  let autoPushEnabled = false;   // 启动静默同步完成后才开启自动回传，避免启动即触发
+  let suppressAutoPush = false;  // 拉取合并期间抑制自动回传，防止死循环
+  let autoPushTimer = null;
+  let lastSyncAt = null;         // 上次成功同步时间
+  let lastCloudCount = null;     // 上次同步的云端条数
+  let lastConflictCount = 0;     // 上次合并检测到的冲突数
 
   function updateGistStatus(status, text) {
     const dot = document.getElementById('gistStatusDot');
@@ -1518,6 +1615,14 @@
     if (status === 'connected') dot.classList.add('connected');
     if (status === 'error') dot.classList.add('error');
     txt.textContent = text;
+    // 同步反映到顶栏常驻指示器
+    const hdot = document.getElementById('syncDot');
+    if (hdot) {
+      hdot.className = 'sync-dot';
+      if (status === 'connected') hdot.classList.add('connected');
+      if (status === 'error') hdot.classList.add('error');
+      if (status === 'syncing') hdot.classList.add('syncing');
+    }
   }
 
   function initGistUI() {
@@ -1539,6 +1644,7 @@
       if (Date.now() - last > GIST_AUTO_SYNC_INTERVAL) {
         connectGist({ silent: true });
       }
+      autoPushEnabled = true; // 启动同步完成后再允许本地改动自动回传
     }
   }
 
@@ -1581,8 +1687,8 @@
       return;
     }
     localStorage.setItem(GIST_TOKEN_KEY, token);
-    if (silent) updateGistStatus('', '正在同步云端数据...');
-    else showToast('正在验证...');
+    updateGistStatus('syncing', silent ? '正在同步云端数据...' : '正在验证...');
+    if (!silent) showToast('正在验证...');
 
     try {
       const res = await fetch('https://api.github.com/gists', {
@@ -1627,11 +1733,13 @@
     }
   }
 
-  async function syncPush() {
+  async function syncPush(opts = {}) {
+    const silent = !!opts.silent;
     const token = localStorage.getItem(GIST_TOKEN_KEY);
-    if (!token) { showToast('请先配置 GitHub Token'); return; }
+    if (!token) { if (!silent) showToast('请先配置 GitHub Token'); return; }
 
-    showToast('正在上传...');
+    updateGistStatus('syncing', '正在上传...');
+    if (!silent) showToast('正在上传...');
     try {
       // 1) 定位当前有效的备份 Gist：优先用本机记录，但先验证是否仍有效；失效则枚举复用已有备份
       let gistId = localStorage.getItem(GIST_ID_KEY);
@@ -1697,16 +1805,24 @@
         data = await res.json();
       }
       localStorage.setItem(GIST_ID_KEY, data.id);
+      lastSyncAt = new Date();
+      lastCloudCount = countReadings(payload);
       updateGistStatus('connected', `已同步 · ${new Date().toLocaleString('zh-CN')}`);
-      showToast('上传成功');
+      if (!silent) showToast('上传成功');
     } catch (err) {
       updateGistStatus('error', '上传失败: ' + err.message);
-      showToast('上传失败');
+      if (!silent) showToast('上传失败');
     }
   }
 
-  // 合并云端与本地读数：保留双方存在的月份，冲突时以云端为准
-  // 这样 pull 不会抹掉本地已抄但云端没有的月份（例如本机抄了 6 月但还没上传）
+  // 统计读数条数（某户某月记一条）
+  function countReadings(obj) {
+    let n = 0;
+    if (obj && obj.readings) Object.values(obj.readings).forEach(m => { if (m && typeof m === 'object') n += Object.keys(m).length; });
+    return n;
+  }
+
+  // 合并云端与本地读数：保留双方存在的月份，后者覆盖前者（冲突以传入顺序决定优先级）
   function mergeReadings(local, incoming) {
     const out = { readings: {} };
     const nums = new Set([
@@ -1722,9 +1838,28 @@
     return out;
   }
 
+  // 检测冲突：同一户同一月份，本地与云端都有值且不一致
+  function detectConflicts(local, incoming) {
+    const conflicts = [];
+    const nums = new Set([...Object.keys(local.readings || {}), ...Object.keys(incoming.readings || {})]);
+    nums.forEach(num => {
+      const lm = (local.readings && local.readings[num]) || {};
+      const im = (incoming.readings && incoming.readings[num]) || {};
+      Object.keys(im).forEach(month => {
+        const lv = lm[month], iv = im[month];
+        if (lv != null && lv !== '' && iv != null && iv !== '' && String(lv) !== String(iv)) {
+          conflicts.push({ num, month, local: lv, incoming: iv });
+        }
+      });
+    });
+    return conflicts;
+  }
+
   // 把合并结果应用到 state 并持久化（云端 + 本地月份都保留，并补回内置初始数据）
-  function applyMerge(obj) {
-    state = mergeReadings(state, obj);
+  // direction: 'cloud'（默认，云端覆盖本地冲突）| 'local'（本地覆盖云端冲突）
+  function applyMerge(obj, direction = 'cloud') {
+    const merged = direction === 'local' ? mergeReadings(obj, state) : mergeReadings(state, obj);
+    state = merged;
     for (const [num, months] of Object.entries(INITIAL_DATA)) {
       if (!state.readings[num]) state.readings[num] = {};
       for (const [month, value] of Object.entries(months)) {
@@ -1734,6 +1869,14 @@
     save();
     buildMonthOptions();
     render();
+  }
+
+  // 手动合并时按用户选择的方向解决冲突并收尾
+  function resolveMerge(obj, direction) {
+    applyMerge(obj, direction);
+    closeModal();
+    updateGistStatus('connected', `已同步 · ${new Date().toLocaleString('zh-CN')}`);
+    showToast('合并成功');
   }
 
   // 拉取指定 Gist 并与本地合并（无确认弹窗，用于「连接即同步」）
@@ -1748,9 +1891,23 @@
     if (!file) throw new Error('找不到数据文件');
     const obj = JSON.parse(file.content);
     if (!validateBackup(obj)) throw new Error('数据格式不正确');
-    const beforeCount = Object.values(state.readings).reduce((s, rm) => s + Object.keys(rm).length, 0);
-    applyMerge(obj);
-    const afterCount = Object.values(state.readings).reduce((s, rm) => s + Object.keys(rm).length, 0);
+
+    clearTimeout(autoPushTimer); // 拉取期间取消任何待发的自动回传，避免死循环
+    const beforeCount = countReadings(state);
+    const conflicts = detectConflicts(state, obj);
+    lastConflictCount = conflicts.length;
+    suppressAutoPush = true;
+    try {
+      applyMerge(obj); // 默认云端优先
+    } finally {
+      suppressAutoPush = false;
+    }
+    lastSyncAt = new Date();
+    lastCloudCount = countReadings(obj);
+    const afterCount = countReadings(state);
+    if (conflicts.length) {
+      showToast(`⚠️ 合并 ${conflicts.length} 处冲突，已采用云端值`);
+    }
     return { beforeCount, afterCount };
   }
 
@@ -1775,18 +1932,29 @@
       const obj = JSON.parse(file.content);
       if (!validateBackup(obj)) throw new Error('数据格式不正确');
 
-      const localCount = Object.values(state.readings).reduce((s, rm) => s + Object.keys(rm).length, 0);
-      const cloudCount = Object.values(obj.readings).reduce((s, rm) => s + Object.keys(rm).length, 0);
+      const localCount = countReadings(state);
+      const cloudCount = countReadings(obj);
+      const conflicts = detectConflicts(state, obj);
 
-      showModal('确认合并', `云端数据更新时间：${new Date(data.updated_at).toLocaleString('zh-CN')}\n\n将把云端数据与本地合并（双方月份都会保留，不会丢失本地已抄的月份）。\n本机 ${localCount} 条 · 云端 ${cloudCount} 条`, [
-        { text: '取消', class: 'ghost', onclick: closeModal },
-        { text: '合并', class: 'primary', onclick: () => {
-          applyMerge(obj);
-          closeModal();
-          updateGistStatus('connected', `已同步 · ${new Date().toLocaleString('zh-CN')}`);
-          showToast('合并成功');
-        }}
-      ]);
+      if (conflicts.length) {
+        const list = conflicts
+          .map(c => `· ${c.num}号 ${fmtMonth(c.month)}：本地 ${c.local} / 云端 ${c.incoming}`)
+          .join('\n');
+        showModal(`发现 ${conflicts.length} 处冲突`, `本地与云端数值不一致，请选择保留哪边：\n<pre class="conflict-list">${escapeHtml(list)}</pre>`, [
+          { text: '取消', class: 'ghost', onclick: closeModal },
+          { text: '全部用本地', class: 'ghost', onclick: () => resolveMerge(obj, 'local') },
+          { text: '全部用云端', class: 'primary', onclick: () => resolveMerge(obj, 'cloud') }
+        ]);
+      } else {
+        showModal('确认合并', `云端数据更新时间：${new Date(data.updated_at).toLocaleString('zh-CN')}\n\n将把云端数据与本地合并（双方月份都会保留，不会丢失本地已抄的月份）。\n本机 ${localCount} 条 · 云端 ${cloudCount} 条`, [
+          { text: '取消', class: 'ghost', onclick: closeModal },
+          { text: '合并', class: 'primary', onclick: () => {
+            lastSyncAt = new Date();
+            lastCloudCount = countReadings(obj);
+            resolveMerge(obj, 'cloud');
+          }}
+        ]);
+      }
     } catch (err) {
       updateGistStatus('error', '下载失败: ' + err.message);
       showToast('下载失败');
