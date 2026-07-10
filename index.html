@@ -1583,7 +1583,20 @@
 
       if (gistId) {
         updateGistStatus('connected', `已连接 · Gist ID: ${gistId.slice(0, 8)}...`);
-        showToast('连接成功，已找到云端备份');
+        showToast('连接成功，正在自动合并云端数据...');
+        try {
+          const r = await pullAndApply(token, gistId);
+          if (r.afterCount > r.beforeCount) {
+            showToast(`已合并云端数据（+${r.afterCount - r.beforeCount} 条）`);
+          } else {
+            showToast('连接成功，本地已是最新');
+          }
+          updateGistStatus('connected', `已同步 · ${new Date().toLocaleString('zh-CN')}`);
+        } catch (pullErr) {
+          // 连接成功但自动拉取失败：不阻断连接，仍可手动「下载」
+          updateGistStatus('error', '已连接，但自动拉取失败: ' + pullErr.message);
+          showToast('已连接，可手动点「下载」同步');
+        }
       } else {
         updateGistStatus('', 'Token 验证成功，点击上传创建备份');
         showToast('连接成功');
@@ -1689,6 +1702,38 @@
     return out;
   }
 
+  // 把合并结果应用到 state 并持久化（云端 + 本地月份都保留，并补回内置初始数据）
+  function applyMerge(obj) {
+    state = mergeReadings(state, obj);
+    for (const [num, months] of Object.entries(INITIAL_DATA)) {
+      if (!state.readings[num]) state.readings[num] = {};
+      for (const [month, value] of Object.entries(months)) {
+        if (!state.readings[num][month]) state.readings[num][month] = value;
+      }
+    }
+    save();
+    buildMonthOptions();
+    render();
+  }
+
+  // 拉取指定 Gist 并与本地合并（无确认弹窗，用于「连接即同步」）
+  // 返回合并前后的条数，便于提示用户是否新增了数据
+  async function pullAndApply(token, gistId) {
+    const res = await fetch(`https://api.github.com/gists/${gistId}`, {
+      headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' }
+    });
+    if (!res.ok) throw new Error('获取失败');
+    const data = await res.json();
+    const file = data.files['meter-reader-data.json'];
+    if (!file) throw new Error('找不到数据文件');
+    const obj = JSON.parse(file.content);
+    if (!validateBackup(obj)) throw new Error('数据格式不正确');
+    const beforeCount = Object.values(state.readings).reduce((s, rm) => s + Object.keys(rm).length, 0);
+    applyMerge(obj);
+    const afterCount = Object.values(state.readings).reduce((s, rm) => s + Object.keys(rm).length, 0);
+    return { beforeCount, afterCount };
+  }
+
   async function syncPull() {
     const token = localStorage.getItem(GIST_TOKEN_KEY);
     const gistId = localStorage.getItem(GIST_ID_KEY);
@@ -1716,17 +1761,7 @@
       showModal('确认合并', `云端数据更新时间：${new Date(data.updated_at).toLocaleString('zh-CN')}\n\n将把云端数据与本地合并（双方月份都会保留，不会丢失本地已抄的月份）。\n本机 ${localCount} 条 · 云端 ${cloudCount} 条`, [
         { text: '取消', class: 'ghost', onclick: closeModal },
         { text: '合并', class: 'primary', onclick: () => {
-          state = mergeReadings(state, obj);
-          // 确保内置初始数据（3月）始终存在
-          for (const [num, months] of Object.entries(INITIAL_DATA)) {
-            if (!state.readings[num]) state.readings[num] = {};
-            for (const [month, value] of Object.entries(months)) {
-              if (!state.readings[num][month]) state.readings[num][month] = value;
-            }
-          }
-          save();
-          buildMonthOptions();
-          render();
+          applyMerge(obj);
           closeModal();
           updateGistStatus('connected', `已同步 · ${new Date().toLocaleString('zh-CN')}`);
           showToast('合并成功');
