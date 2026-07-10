@@ -1508,6 +1508,8 @@
   // ============== GitHub Gist 同步 ==============
   const GIST_TOKEN_KEY = 'meter-reader-gist-token';
   const GIST_ID_KEY = 'meter-reader-gist-id';
+  const GIST_LAST_SYNC_KEY = 'meter-reader-gist-lastsync';
+  const GIST_AUTO_SYNC_INTERVAL = 20000; // 启动自动同步最小间隔（ms），避免频繁刷新狂打 GitHub API
 
   function updateGistStatus(status, text) {
     const dot = document.getElementById('gistStatusDot');
@@ -1530,6 +1532,13 @@
       updateGistStatus('', 'Token 已保存，点击连接');
     } else {
       updateGistStatus('', '未连接');
+    }
+    // 启动即静默同步：已保存 Token 时自动连接并合并云端数据（带节流，避免频繁刷新狂打 API）
+    if (token) {
+      const last = parseInt(localStorage.getItem(GIST_LAST_SYNC_KEY) || '0', 10);
+      if (Date.now() - last > GIST_AUTO_SYNC_INTERVAL) {
+        connectGist({ silent: true });
+      }
     }
   }
 
@@ -1558,14 +1567,22 @@
     return backups[0];
   }
 
-  async function connectGist() {
-    const token = document.getElementById('gistTokenInput').value.trim();
+  // opts.silent=true 时用于启动自动同步：不弹「正在验证」等打扰式提示，
+  // 仅在成功合并出新数据时才用 toast 通知；失败静默，不阻断用户使用
+  async function connectGist(opts = {}) {
+    const silent = !!opts.silent;
+    let token = opts.token;
     if (!token) {
-      showToast('请输入 GitHub Token');
+      token = (document.getElementById('gistTokenInput') || {}).value || '';
+      token = token.trim();
+    }
+    if (!token) {
+      if (!silent) showToast('请输入 GitHub Token');
       return;
     }
     localStorage.setItem(GIST_TOKEN_KEY, token);
-    showToast('正在验证...');
+    if (silent) updateGistStatus('', '正在同步云端数据...');
+    else showToast('正在验证...');
 
     try {
       const res = await fetch('https://api.github.com/gists', {
@@ -1582,28 +1599,31 @@
       if (gistId) localStorage.setItem(GIST_ID_KEY, gistId);
 
       if (gistId) {
-        updateGistStatus('connected', `已连接 · Gist ID: ${gistId.slice(0, 8)}...`);
-        showToast('连接成功，正在自动合并云端数据...');
+        if (!silent) updateGistStatus('connected', `已连接 · Gist ID: ${gistId.slice(0, 8)}...`);
+        if (!silent) showToast('连接成功，正在自动合并云端数据...');
         try {
           const r = await pullAndApply(token, gistId);
+          localStorage.setItem(GIST_LAST_SYNC_KEY, String(Date.now()));
           if (r.afterCount > r.beforeCount) {
-            showToast(`已合并云端数据（+${r.afterCount - r.beforeCount} 条）`);
-          } else {
+            showToast(`已同步云端数据（+${r.afterCount - r.beforeCount} 条）`);
+          } else if (!silent) {
             showToast('连接成功，本地已是最新');
           }
           updateGistStatus('connected', `已同步 · ${new Date().toLocaleString('zh-CN')}`);
         } catch (pullErr) {
           // 连接成功但自动拉取失败：不阻断连接，仍可手动「下载」
           updateGistStatus('error', '已连接，但自动拉取失败: ' + pullErr.message);
-          showToast('已连接，可手动点「下载」同步');
+          if (!silent) showToast('已连接，可手动点「下载」同步');
         }
       } else {
-        updateGistStatus('', 'Token 验证成功，点击上传创建备份');
-        showToast('连接成功');
+        if (!silent) {
+          updateGistStatus('', 'Token 验证成功，点击上传创建备份');
+          showToast('连接成功');
+        }
       }
     } catch (err) {
-      updateGistStatus('error', '连接失败: ' + err.message);
-      showToast('连接失败');
+      updateGistStatus('error', (silent ? '自动同步失败: ' : '连接失败: ') + err.message);
+      if (!silent) showToast('连接失败');
     }
   }
 
