@@ -2,6 +2,10 @@
 
 > 智能抄表管理工具 · 支持 GitHub Gist 跨设备云同步
 
+[![Deploy to GitHub Pages](https://github.com/yydshy/meter-reader/actions/workflows/deploy.yml/badge.svg)](https://github.com/yydshy/meter-reader/actions)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Made with ❤️](https://img.shields.io/badge/Made%20with-%E2%9D%A4-red.svg)]()
+
 单文件、零依赖的抄表助手。支持 28 户预配置、楼层分组、用电量自动计算、历史记录、数据导出及 GitHub Gist 云同步。
 
 ---
