@@ -1,12 +1,12 @@
 /* Service Worker for 抄表助手 PWA */
-var CACHE = 'meter-reader-v1';
+var CACHE = 'meter-reader-v2';
 var SHELL = [
-  '/',
-  '/index.html',
-  '/manifest.webmanifest',
-  '/icons/icon-192.png',
-  '/icons/icon-512.png',
-  '/icons/apple-touch-icon.png'
+  './',
+  './index.html',
+  './manifest.webmanifest',
+  './icons/icon-192.png',
+  './icons/icon-512.png',
+  './icons/apple-touch-icon.png'
 ];
 
 self.addEventListener('install', function(e) {
