@@ -3,10 +3,13 @@
 > 智能抄表管理工具 · 支持 GitHub Gist 跨设备云同步
 
 [![Deploy to GitHub Pages](https://github.com/yydshy/meter-reader/actions/workflows/deploy.yml/badge.svg)](https://github.com/yydshy/meter-reader/actions)
+[![PWA](https://img.shields.io/badge/PWA-Installable-9b59b6)](https://web.dev/learn/pwa)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Made with ❤️](https://img.shields.io/badge/Made%20with-%E2%9D%A4-red.svg)]()
 
-单文件、零依赖的抄表助手。支持 28 户预配置、楼层分组、用电量自动计算、历史记录、数据导出及 GitHub Gist 云同步。
+单文件、零依赖的抄表助手。支持 28 户预配置、楼层分组、用电量自动计算、历史记录、数据导出及 GitHub Gist 云同步。**已升级为可安装的 PWA——添加到主屏幕，像原生 App 一样全屏离线使用。**
+
+🌐 线上地址：**https://yydshy.github.io/meter-reader/**
 
 ---
 
@@ -49,6 +52,19 @@
 2. 进入仓库 **Settings → Pages**
 3. Source 选择 **GitHub Actions**
 4. 访问 `https://your-username.github.io/meter-reader/`
+
+---
+
+## 📱 添加到主屏幕（PWA · 像 App 一样用）
+
+| 平台 | 操作 |
+| --- | --- |
+| Android · Chrome | 打开网页 → 点顶部「添加到主屏幕」引导条 → 添加 |
+| iPhone · Safari | 打开网页 → 底部「分享」→「添加到主屏幕」 |
+
+添加后即为全屏独立应用：无地址栏、断网可开、桌面有图标。
+
+> ⚠️ Service Worker 仅在 `https` 或 `localhost` 下生效；直接双击 `file://` 打开功能正常，但不会注册离线缓存。若曾安装旧版图标，请先删掉主屏图标再重新添加以加载新图标。
 
 ---
 
@@ -105,6 +121,7 @@
 | HTML5 / CSS3 / Vanilla JS | 单文件应用，零构建 |
 | GitHub Gist API | 跨设备数据同步 |
 | localStorage | 本地数据持久化 |
+| Service Worker + Manifest | PWA 离线缓存与可安装 |
 | GitHub Actions | 自动部署到 Pages |
 
 ---
@@ -114,6 +131,12 @@
 ```
 meter-reader/
 ├── index.html              # 主应用（单文件）
+├── manifest.webmanifest    # PWA 安装清单
+├── sw.js                   # Service Worker（离线缓存）
+├── icons/                  # 192 / 512 / Apple Touch 图标
+│   ├── icon-192.png
+│   ├── icon-512.png
+│   └── apple-touch-icon.png
 ├── README.md               # 项目说明
 └── .github/
     └── workflows/
